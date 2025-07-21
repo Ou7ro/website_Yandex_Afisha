@@ -23,7 +23,7 @@ from places.views import index, places_json
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', index),
-    path('places/<str:place_id>/', places_json)
+    path('places/<str:place_id>/', places_json, name='place-json')
     
 ]
 
