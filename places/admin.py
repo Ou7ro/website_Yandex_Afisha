@@ -18,6 +18,7 @@ class ImageInline(SortableInlineAdminMixin, admin.TabularInline):
 
 class PlaceAdmin(SortableAdminBase, admin.ModelAdmin):
     inlines = [ImageInline]
+    search_fields = ['title']
 
 
 admin.site.register(Place, PlaceAdmin)
