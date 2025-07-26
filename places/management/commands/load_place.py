@@ -3,7 +3,7 @@ import requests
 from places.models import Place, Image
 from io import BytesIO
 from django.core.files import File
-from requests.exceptions import MissingSchema, RequestException
+from requests.exceptions import RequestException
 
 
 class Command(BaseCommand):
