@@ -1,8 +1,9 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 import requests
 from places.models import Place, Image
 from io import BytesIO
 from django.core.files import File
+from requests.exceptions import MissingSchema, RequestException
 
 
 class Command(BaseCommand):
@@ -17,13 +18,24 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         json_url = options['json_url']
-        response = requests.get(json_url)
-        response.raise_for_status()
-        place_property = response.json()
+        try:
+            response = requests.get(json_url, timeout=10)
+            response.raise_for_status()
+            place_property = response.json()
+        except RequestException as e:
+            raise CommandError(f'Ошибка загрузки JSON: {str(e)}')
+        except ValueError:
+            raise CommandError('Некорректный формат JSON')
 
-        place, _ = self.create_place(place_property)
+        try:
+            place, _ = self.create_place(place_property)
+        except (KeyError, ValueError) as e:
+            raise CommandError(f'Ошибка сохранения места: {str(e)}')
 
-        self.load_images(place, place_property['imgs'])
+        try:
+            self.load_images(place, place_property['imgs'])
+        except RequestException as e:
+            raise CommandError(f'Ошибка загрузки изображений: {str(e)}')
 
     def create_place(self, property):
         return Place.objects.get_or_create(
@@ -38,12 +50,10 @@ class Command(BaseCommand):
         )
 
     def load_images(self, place, image_urls):
-
         for image_url in image_urls:
             response = requests.get(image_url)
             response.raise_for_status()
             img_file = BytesIO(response.content)
-
             img_name = self.extract_filename(image_url)
             image = Image(place=place)
             image.image.save(img_name, File(img_file))
