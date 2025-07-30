@@ -1,9 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 import requests
 from places.models import Place, Image
-from io import BytesIO
-from django.core.files import File
 from requests.exceptions import RequestException
+from django.core.files.base import ContentFile
 
 
 class Command(BaseCommand):
@@ -28,14 +27,14 @@ class Command(BaseCommand):
             raise CommandError('Некорректный формат JSON')
 
         try:
-            place, _ = self.create_place(place_property)
+            place, created = self.create_place(place_property)
+            if created:
+                try:
+                    self.load_images(place, place_property['imgs'])
+                except RequestException as e:
+                    raise CommandError(f'Ошибка загрузки изображений: {str(e)}')
         except (KeyError, ValueError) as e:
             raise CommandError(f'Ошибка сохранения места: {str(e)}')
-
-        try:
-            self.load_images(place, place_property['imgs'])
-        except RequestException as e:
-            raise CommandError(f'Ошибка загрузки изображений: {str(e)}')
 
     def create_place(self, property):
         return Place.objects.get_or_create(
@@ -50,14 +49,21 @@ class Command(BaseCommand):
         )
 
     def load_images(self, place, image_urls):
-        for image_url in image_urls:
+        for position, image_url in enumerate(image_urls, start=1):
             response = requests.get(image_url)
             response.raise_for_status()
-            img_file = BytesIO(response.content)
+
             img_name = self.extract_filename(image_url)
-            image = Image(place=place)
-            image.image.save(img_name, File(img_file))
-            image.save()
+            img_content = ContentFile(
+                response.content,
+                name=img_name
+            )
+
+            Image.objects.create(
+                place=place,
+                image=img_content,
+                position=position
+            )
 
     def extract_filename(self, url):
         return url.split('/')[-1].split('?')[0]

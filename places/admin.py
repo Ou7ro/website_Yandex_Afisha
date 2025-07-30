@@ -19,11 +19,12 @@ class ImageInline(SortableInlineAdminMixin, admin.TabularInline):
 
     image_preview.short_description = "Превью"
 
-
+@admin.register(Place)
 class PlaceAdmin(SortableAdminBase, admin.ModelAdmin):
     inlines = [ImageInline]
     search_fields = ['title']
 
 
-admin.site.register(Place, PlaceAdmin)
-admin.site.register(Image)
+@admin.register(Image)
+class ImageAdmin(admin.ModelAdmin):
+    raw_id_fields = ['place']
