@@ -38,7 +38,7 @@ class Command(BaseCommand):
 
     def create_place(self, property):
         return Place.objects.get_or_create(
-            place_id=property.get('place_id', self.generate_place_id(property['title'])),
+            title=property['title'],
             defaults={
                 'title': property['title'],
                 'description_short': property.get('description_short', ''),
@@ -67,6 +67,3 @@ class Command(BaseCommand):
 
     def extract_filename(self, url):
         return url.split('/')[-1].split('?')[0]
-
-    def generate_place_id(self, title):
-        return title.lower().replace(' ', '-')
